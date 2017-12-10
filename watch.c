@@ -11,7 +11,7 @@
 #define TimePres 1 // Сек. отображения давления
 #define TimeCO2 1 // Сек. отображения CO2
 
-#define TimePoll 1
+#define TimePoll 2
 
 vu8 TTime;
 vu8 TTemp;
@@ -31,34 +31,34 @@ void OutAll(vu8 seg1, vu8 seg2, vu8 seg3, vu8 seg4) // Вывод всех сегментов
 		OutSection(seg1);
 		//*dp24_d=1;
 		*DIG1=0; *DIG2=1; *DIG3=1; *DIG4=1;
-		if (++tpol>TimePoll) {tpol=0; ttp++; ClearAllSeg;	/*dp24_d=0;*/}		
+		if (++tpol>=TimePoll) {tpol=0; ttp++; ClearAllSeg;	/*dp24_d=0;*/}		
 	}
 	else if (ttp==1) {
 		OutSection(seg2);
 		//*dp24_d=0;
 		*DIG1=1; *DIG2=0; *DIG3=1; *DIG4=1;
-		if (++tpol>TimePoll) {tpol=0; ttp++; ClearAllSeg;}	
+		if (++tpol>=TimePoll) {tpol=0; ttp++; ClearAllSeg;}	
 	}
 	else if (ttp==2) {
 		OutSection(seg3);
 		//*dp24_d=1;
 		*DIG1=1; *DIG2=1; *DIG3=0; *DIG4=1;
-		if (++tpol>TimePoll) {tpol=0; ttp++; ClearAllSeg;}
+		if (++tpol>=TimePoll) {tpol=0; ttp++; ClearAllSeg;}
 	}
 	else if (ttp>=3) {
 		OutSection(seg4);
 		//*dp24_d=1;
 		*DIG1=1; *DIG2=1; *DIG3=1; *DIG4=0;
-		if (++tpol>TimePoll) {tpol=0; ttp=0; ClearAllSeg;}	
+		if (++tpol>=TimePoll) {tpol=0; ttp=0; ClearAllSeg;}	
 	}
 	CheckPoint(ttp, nwp);
 }
 
 void CheckPoint(u8 ttp, u8 who){
  if (who==0) { // Часы
-	if (ttp == 1) {if(blink<5) {*dp24_d=0;} else {*dp24_d=1;}} else {*dp24_d=1;} // Часы с миганием
+	if (ttp == 1) {if(blink<5) {*dp24_d=0;} else {*dp24_d=1;}} else {*dp24_d=1;} // Часы с миганием 1.0
  } else if (who==1) { //temp
-		if (ttp == 0) {*dp24_d=0;} else {*dp24_d=1;}
+		if (ttp == 1) {*dp24_d=0;} else {*dp24_d=1;}
 		} else {*dp24_d=1;}
     
 }

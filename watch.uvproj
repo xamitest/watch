@@ -10,6 +10,7 @@
       <TargetName>stm32f103</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
+      <pCCUsed>5060422::V5.06 update 4 (build 422)::ARMCC</pCCUsed>
       <TargetOption>
         <TargetCommonOption>
           <Device>STM32F103C8</Device>
@@ -466,6 +467,11 @@
               <FileName>bme280.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\bme280.c</FilePath>
+            </File>
+            <File>
+              <FileName>usr232.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\usr232.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -15,20 +15,21 @@
 	*/
 
 #define a Peripheral_BB(GPIOA->ODR, 1) //pa1
-#define b Peripheral_BB(GPIOA->ODR, 2) //pa2
-#define c Peripheral_BB(GPIOA->ODR, 3) //pa3
+#define b Peripheral_BB(GPIOA->ODR, 8) //pa8
+#define c Peripheral_BB(GPIOA->ODR, 0) //pa0
 #define d Peripheral_BB(GPIOA->ODR, 4) //pa4
 #define e Peripheral_BB(GPIOA->ODR, 5) //pa5
 #define f Peripheral_BB(GPIOA->ODR, 6) //pa6
 #define g Peripheral_BB(GPIOA->ODR, 7) //pa7
 
-#define dp24_d Peripheral_BB(GPIOB->ODR, 0) //pb0
+#define dp24_d Peripheral_BB(GPIOB->ODR, 7) //pb0 // delete
 
 #define DIG1 Peripheral_BB(GPIOB->ODR, 7) //pb7
 #define DIG2 Peripheral_BB(GPIOB->ODR, 1) //pb1
 #define DIG3 Peripheral_BB(GPIOB->ODR, 10) //pb10
 #define DIG4 Peripheral_BB(GPIOB->ODR, 11) //pb11
-#define pb5 Peripheral_BB(GPIOA->ODR, 0) //pb5
+
+#define DustLed Peripheral_BB(GPIOB->ODR, 9) //DustLed
 
 extern vu8 nwp;
 extern vu8 ttp;

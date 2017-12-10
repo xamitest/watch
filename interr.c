@@ -18,15 +18,27 @@ void SysTick_Handler(void){
 					chList[chCOM].ptrIN=0;
 					}
 	}
-	
+	if(CntTimeRxUSR<100){
+		CntTimeRxUSR++;		//
+	}
+	else{
+			if(chList[chUSR].ptrIN >=1){		//
+					if(chList[chUSR].chState & chEnaData) {chList[chUSR].chState |= chPakInOFlow;} 	// 
+					for(i=0;i<chList[chUSR].ptrIN;i++) {chList[chUSR].PakIN[i]=chList[chUSR].buffIN[i];} // 
+					chList[chUSR].PakINLen=chList[chUSR].ptrIN;
+					chList[chUSR].chState |=chEnaData;
+					chList[chUSR].ptrIN=0;
+					}
+	}
 	if(++Cnt10mSec>10){ // 10 мсек
 		Cnt10mSec=0;
-		FlTime |=BIT(1);
+		FlTime |=BIT(1);		
 	}
 	if(++Cnt100mSec>100){ // 100 мсек
 		Cnt100mSec=0;
 		Cnt1Sec++;
 		FlTime |=BIT(2);
+		*DustLed ^=1;
 	}
 	if(Cnt1Sec>10){ // 1 сек
 		Cnt1Sec=0;
@@ -38,6 +50,9 @@ void SysTick_Handler(void){
 		FlTime |=BIT(4);
 	}
 // PacketCycle();
+	if (hourDec>=23 || hourDec<=6) {
+		Working(); // Уменьшение яркости
+	}
 	Working();
 }
 
@@ -83,6 +98,48 @@ status=USART1->SR;
 }
 }
 
+void USART2_IRQHandler(void){
+vu8 dd, i;
+vu16 status;
+status=USART2->SR;
+	if(status & BIT(USART_RXNE)){		// принят байт
+		USART2->SR &= ~BIT(USART_RXNE);	// На всякий случай.
+		if(CntTimeRxUSR>=100){
+			chList[chUSR].ptrIN=0;		// Новый пакет, на начало.
+		}
+		dd=USART2->DR;
+		CntTimeRxUSR=0; 
+		if(chList[chUSR].ptrIN>=255) chList[chUSR].ptrIN=255;
+		chList[chUSR].buffIN[chList[chUSR].ptrIN++]=dd;		// DD записали в буф.
+	}
+	else if(status & BIT(USART_TXE)){		// Буфер передачи пуст.
+	  if((USR_mode & BIT(5))==0){   // Уходит не последний байт.
+      if(chList[chUSR].ptrOUT < (255)) chList[chUSR].ptrOUT++;
+			else{
+					USR_mode |=BIT(5);		// В конце выдачи последнего байта разрешим прием.
+					chList[chUSR].chState &= ~chSend;		// Закончилась передача в СОМ.
+			}
+      if(chList[chUSR].ptrOUT>=chList[chUSR].buffOUTLen){		// Байт был последний.
+        USR_mode |=BIT(5);    // В конце выдачи последнего байта разрешим прием.
+        chList[chUSR].chState &= ~chSend;		// Закончилась передача в СОМ1.
+      }
+      else{
+        i=chList[chUSR].ptrOUT;
+        USART2->DR=chList[chUSR].buffOUT[i];		// Выдаём очередной байт.
+      }
+	  }else if (status & BIT(USART_TC)){
+      USART2->SR &= ~BIT(USART_TC);    // Снять флаг.
+      USR_mode &= ~BIT(5);
+      USART2->CR1 &= ~BIT(USART_TXEIE);   // Запрещено прерывание передачи в COM1.
+      USART2->CR1 |=BIT(USART_RXNEIE);    // Разрешено прерывание приема COM1.
+	  }
+		if(status & BIT(USART_ORE)){ // Переполнение приема.  | BIT(USART_FE) | BIT(USART_NF))
+			dd=USART2->SR;
+			dd=USART2->DR;
+		}
+}
+}
+
 //=== Прерывания SPI2 ===//
 void SPI2_IRQHandler(void){
 vu8 data;
@@ -99,4 +156,12 @@ vu8 data;
       SPI_mode &= ~BIT(7);            // Освобождаем канал.
     }
   }
+}
+void ADC_IRQHandler(void){
+u32 reg;
+	reg=ADC1->SR;
+}
+void ADC1_2_IRQHandler(void){
+ADC1->SR&=~0x1F;
+Pill=0x0FFF & (ADC1->DR);
 }

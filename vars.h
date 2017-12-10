@@ -13,13 +13,17 @@
 
 #define APBCLK 		24000000UL
 #define BAUDRATE  9600
+#define BAUDRATEusr232 115200
 #define MaxPacketLen 255
 #define chCOM 0 // bluetooth
+#define chUSR 1 // usr232
 #define ChanelCount 3
 
 
 extern vu8 CntTimeRxD;		// Счетчик таймаута.
 extern vu8 COM_mode;
+extern vu8 CntTimeRxUSR;		// Счетчик таймаута.
+extern vu8 USR_mode;
 extern vu8 Cnt1mSec;	// Счетчик по 1 мсек.
 extern vu8 Cnt100mSec;	// Счетчик по 100 мсек.
 extern vu8 Cnt10mSec; // Счетчик по 10 мсек.
@@ -30,17 +34,21 @@ extern vu8 Check;	// защита от зависания
 extern vu8 TimeCheck;	// Таймер
 extern vu8 Event;	// 
 extern vu8 P;	// 
+extern vu8 PWM;	// Яркость
 
 extern vu8 wday;
 extern vu8 sec;
 extern vu8 min;
 extern vu8 hour;
+extern vu8 hourDec;
 extern vu8 mday;
 extern vu8 mon;
 extern vu32 year;
 extern vu32 us;
 extern vu8 TimeForCO2;
 extern vu16 CO2;
+
+
 extern char namesend[];
 extern char pinsend[];
 
@@ -88,6 +96,7 @@ void RTC_SetCounter(vu32 count)      ;
 // subs.c
 void SystemInit(void);
 void SendToCOM(void);
+void SendToUSR232(void);
 void InitPcktMan(void);
 void PacketCycle(void);
 u16 crc16(vu8* pck, vu8 len);
@@ -96,7 +105,9 @@ void Delay(u16 us);
 
 extern long temperature;
 extern long pressure;
+extern float press_f;
 extern long humidity;
+extern vu16 Pill;
 #define SetCS()		(GPIOB->BSRR=(BIT(12) << 16))		// Выбрать SD->L.
 #define ResetCS()	(GPIOB->BSRR=BIT(12))		// Отключить SD->H.
 #define SetSPIIE()	(SPI2->CR2 |= BIT(SPI_RXNEIE))		// Разрешить прерывание RX.

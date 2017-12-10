@@ -69,7 +69,7 @@ void bmp280Convert(long* temperature, long* pressure, long* humidity)
   var1 = ((double)dig_P9) * p * p / 2147483648.0;
   var2 = p * ((double)dig_P8) / 32768.0;
   p = (p + (var1 + var2 + ((double)dig_P7)) / 16.0);
-
+	press_f=((long)p);
   *pressure = ((long)p);
 }
 //----------------------------------------

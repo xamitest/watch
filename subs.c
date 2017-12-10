@@ -1,7 +1,7 @@
 #include <cortexm3_macro.h>
 #include <stm32/stm32f10x.h>
 #include "vars.h"
-
+#include "usr232.h"
 
 // Init system clock
 void SystemInit(void)
@@ -11,8 +11,6 @@ void SystemInit(void)
 	
 	vu32* pDest;
 	CLI(); // «апрет всех прерываний
-	
-	for(pDest=(u32*)RAM_START;pDest<(u32*)RAM_END;pDest +=4) *(pDest)=0; 
 	
 	RCC->CR |= BIT(RCC_HSEON); // Enable HSE
 	 do
@@ -25,6 +23,7 @@ void SystemInit(void)
    RCC->CFGR &= ~(0xFFFFFFFF);
 	    /* PLL configuration = HSE * 3 = 24 MHz */
    RCC->CFGR |= BIT(RCC_PLLSRC) | BIT(RCC_PLLMUL0);
+//	 RCC->CFGR |= RCC_ADCPRE1;
 	 RCC->CR |= BIT(RCC_PLLON);
 	 while((RCC->CR & BIT(RCC_PLLRDY)) == 0){}
 
@@ -33,8 +32,8 @@ void SystemInit(void)
 	 StartUpCounter=200;
    while(StartUpCounter--){NOP();}
 	 
-	RCC->APB1ENR |= BIT(RCC_PWREN) | BIT(RCC_BKPEN) | BIT(RCC_TIM7EN) | BIT(RCC_SPI2EN);  //¬ключить тактирование PWR и Backup, TIM7
-	RCC->APB2ENR |= (BIT(RCC_IOPAEN)|BIT(RCC_IOPBEN)|BIT(RCC_IOPCEN));
+	RCC->APB1ENR |= BIT(RCC_PWREN) | BIT(RCC_BKPEN) | BIT(RCC_SPI2EN);  //¬ключить тактирование PWR и Backup, TIM7
+	RCC->APB2ENR |= (BIT(RCC_IOPAEN)|BIT(RCC_IOPBEN)|BIT(RCC_IOPCEN)|BIT(RCC_ADC1EN));
 	RCC->APB2ENR |= BIT(RCC_AFIOEN);
 	RCC->APB2ENR |= BIT(RCC_USART1EN);
 	 	 
@@ -48,6 +47,7 @@ void SystemInit(void)
 	 
 	GPIOB->CRH &=~0xFFFFFFFF;
 	GPIOB->CRL &=~0xFFFFFFFF;
+	
 	 
 	GPIOB->CRH |= BIT(20) | BIT(21) | BIT(23); //SPIx_SCK PB13 Alternate function push-pull
 	GPIOB->CRH |= BIT(28) | BIT(29) | BIT(31); //SPIx_MOSI PB15 Alternate function push-pull
@@ -73,6 +73,8 @@ void SystemInit(void)
 	USART1->CR1 |= BIT(USART_RXNEIE);
 	
 	vu8 i = USART1->DR;
+	
+	initUSR232();
 	
 	vu32 DR1=BKP->DR1;
 	vu32 CR=BKP->CR;
@@ -100,30 +102,38 @@ void SystemInit(void)
  // PWR->CR &= ~BIT(PWR_DBP);                                  //запретить доступ к Backup области
 	unix_cal set_time;
 
-	set_time.mday = 1;
-	set_time.mon = 1;
+	set_time.mday = 2; // ƒни
+	set_time.mon = 9;  // ћес€цы 0 Ч 11
 	set_time.sec = 55;
-	set_time.min = 16;
-	set_time.hour = 00;
-	set_time.wday = 2;
-	set_time.year = 2017;
+	set_time.min = 45;
+	set_time.hour = 23;
+	set_time.wday = 2; // ƒни недели
+	set_time.year = 2017; // с 1900 года
 		
 	RTC_SetCounter(cal_to_timer (&set_time));
 	
   }
 	PWR->CR &= ~BIT(PWR_DBP); 
 
+		
+	GPIOB->CRL &= ~((3<<0) | (3<<2)); // 8ch adc dust
+	GPIOB->CRH |=(3<<4); //DustLed
 	
-			 		// TIM for Delay	T
-	/*TIM7->DIER &= ~BIT(TIM6_UIE);
-	TIM7->CR1 &= ~BIT(TIM6_CEN);
-	TIM7->PSC = 24 - 1; // wtf? 30 было
-	TIM7->CNT = 0;
-	TIM7->ARR = 100;
-	TIM7->DIER |= BIT(TIM6_UIE);
-	TIM7->CR1 |= BIT(TIM6_CEN);*/
+	ADC1->CR2 |=BIT(ADC_ADON);
+	ADC1->CR2|=BIT(ADC_CAL);
+	while(ADC1->CR2&BIT(ADC_CAL));
+	ADC1->CR2 =(7<<17)|BIT(ADC_EXTTRIG);		// 
+	ADC1->SMPR2 = (7<<24); // freq 240 cycles
+	ADC1->CR1 |= BIT(ADC_EOCIE);
+	ADC1->SQR3=8;
+	ADC1->SQR2=0;
+	ADC1->SQR1=0;
+	ADC1->CR2 |=BIT(ADC_ADON);
+
 	
-	NVIC->Enable[1] |= BIT(NVIC_USART1) | BIT(NVIC_SPI2);
+	
+	NVIC->Enable[0] |= BIT(NVIC_ADC);
+	NVIC->Enable[1] |= BIT(NVIC_USART1) | BIT(NVIC_SPI2) | BIT(NVIC_USART2);
 	NVIC->Priority[9]=0; NVIC->Priority[9]=0x00300020; // USART1 - 3
 //	NVIC->Priority[11]=0; NVIC->Priority[11]=0x00000500 // TIM7 - 5
 	//   SysTick   
@@ -141,19 +151,23 @@ void SystemInit(void)
 	GPIOC->CRH |= BIT(20); //c13 led
 	
 	GPIOA->CRL |= BIT(4); //a1
-	GPIOA->CRL |= BIT(8); //a2
-	GPIOA->CRL |= BIT(12); //a3
+	GPIOA->CRL |= BIT(0); //a0
+	GPIOA->CRH |= BIT(0); //a8
 	GPIOA->CRL |= BIT(16); //a4
 	GPIOA->CRL |= BIT(20); //a5
 	GPIOA->CRL |= BIT(24); //a6
 	GPIOA->CRL |= BIT(28); //a7
 	
-	GPIOB->CRL |= BIT(0); //b0
+//	GPIOB->CRL |= BIT(0); //b0
 	GPIOB->CRL |= BIT(4); //b1
 	GPIOB->CRL |= BIT(28); //b7
 	GPIOB->CRH |= BIT(8); //b10
 	GPIOB->CRH |= BIT(12); //b11
 		GPIOA->CRL |= BIT(1); //b4
+//	GPIOC->CRH |=	0x77100000;
+
+	
+
 	SEI();		// √лобальное разрешение прерываний.
 }
 
@@ -168,6 +182,11 @@ vu8 i;
 	chList[chCOM].chState=0;
 	chList[chCOM].buffOUTLen=0;
 	chList[chCOM].SendFunc=SendToCOM;
+	
+	chList[chUSR].chanelID=chUSR;
+	chList[chUSR].chState=0;
+	chList[chUSR].buffOUTLen=0;
+	chList[chUSR].SendFunc=SendToUSR232;
 }
 
 //=== Send data ===//
@@ -176,6 +195,13 @@ void SendToCOM(void){
 	USART1->CR1 |= 	BIT(USART_TE);  		// Enable TX int
 	USART1->DR = chList[chCOM].buffOUT[chList[chCOM].ptrOUT];
 	USART1->CR1 |= 	BIT(USART_TXEIE);  		// Enable TX int
+}
+//=== Send data ===//
+void SendToUSR232(void){
+	USART2->CR1 &=  ~BIT(USART_RXNEIE);	// Disable RX int
+	USART2->CR1 |= 	BIT(USART_TE);  		// Enable TX int
+	USART2->DR = chList[chUSR].buffOUT[chList[chUSR].ptrOUT];
+	USART2->CR1 |= 	BIT(USART_TXEIE);  		// Enable TX int
 }
 
 void PacketCycle(void){
@@ -193,13 +219,15 @@ void PacketCycle(void){
 				chList[chCOM].buffOUTLen=j;
 				chList[chCOM].SendFunc();
 				*/
-				PackCRC=0;
-				for (j = 1; j < 8; j++) {PackCRC+=chList[i].PakIN[j];}
-				PackCRC = 255 - PackCRC;
-				PackCRC++;
-				
-				if (chList[i].PakIN[1]==0x86 && chList[i].PakIN[8]==PackCRC) {// ќтветил MH-Z19
-					CO2 = chList[i].PakIN[2] * 256 + chList[i].PakIN[3];
+				if (i==chCOM) {
+					PackCRC=0;
+					for (j = 1; j < 8; j++) {PackCRC+=chList[i].PakIN[j];}
+					PackCRC = 255 - PackCRC;
+					PackCRC++;
+					
+					if (chList[i].PakIN[1]==0x86 && chList[i].PakIN[8]==PackCRC) {// ќтветил MH-Z19
+						CO2 = chList[i].PakIN[2] * 256 + chList[i].PakIN[3];
+					}
 				}
 				chList[i].chState=0;
 			}
